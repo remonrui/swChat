@@ -10,6 +10,10 @@
 // +----------------------------------------------------------------------
 
 use think\facade\Env;
+use chat\Message;
+use chat\ErrorCode;
+use app\server\controller\SendHandle;
+use app\server\Model\asyncTask;
 
 // +----------------------------------------------------------------------
 // | Swoole设置 php think swoole:server 命令行下有效
@@ -34,8 +38,40 @@ return [
     },
 
     'onMessage' => function ($server, $frame) {
+
+
+        $fd = $frame->fd;
+
+        try{
+            $data = json_decode($frame->data);
+
+            if (!isset($data['message'])){
+                $message = Message::error(ErrorCode::Error('ParameterError'));
+                $server->push($fd, $message);
+
+                return;
+            }else{
+                $handle = new SendHandle();
+
+                $handle->handle();
+
+                $message = $handle->send();
+            }
+
+            $fds = $server->connections;
+
+            foreach ($fds as $fd)
+            {
+                $server->push($fd, $message);
+            }
+
+        }catch (\Exception $exception)
+        {
+            throw new Exception($exception);
+        }
+
+
         echo "receive from {$frame->fd}:{$frame->data},opcode:{$frame->opcode},fin:{$frame->finish}\n";
-        $server->push($frame->fd, "this is server");
     },
 
     'onRequest' => function ($request, $response) {
@@ -44,5 +80,12 @@ return [
 
     'onClose' => function ($ser, $fd) {
         echo "client {$fd} closed\n";
+    },
+
+    /**
+     * 异步task
+     */
+    'onTask' =>function($ser, $task_id,$from_id, $data){
+        return asyncTask::LogToDb($ser, $task_id, $from_id, $data,1);
     },
 ];
