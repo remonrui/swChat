@@ -219,13 +219,12 @@
         };
 
         var link =  function  () {
-            ws = new WebSocket("ws://192.168.101.69:9508");//连接服务器
+            ws = new WebSocket("ws://192.168.101.72:9508");//连接服务器
             ws.onopen = function(event){
                 var arr = {
                     code:10,
-                    msg: '登陆' ,
+                    message: '登陆' ,
                     sessid: $.cookie('sessid'),
-                    md5:  $.cookie('md5'),
                     nick: $.cookie('nick'),
                     icon: $.cookie('icon')
                 };
@@ -272,7 +271,6 @@
                             code:10,
                             msg: '登陆' ,
                             sessid : $.cookie('sessid'),
-                            md5:  $.cookie('md5'),
                             nick: $.cookie('nick'),
                             icon: $.cookie('icon')
                         };
