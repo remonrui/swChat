@@ -8,6 +8,7 @@
 
 namespace app\server\controller;
 
+use chat\Client;
 use think\Exception;
 use think\facade\Log;
 use tools\Redis;
@@ -15,48 +16,49 @@ use tools\Redis;
 class WebSocketHandle
 {
     protected static $redis;
-    protected static $userSet = "UserOnlineSet";
     protected static $userHash = "UserHash";
+    protected static $status = "_status";
+    protected static $userOnline = "UserOnline";
+    protected  static $on_line_count = 0;
 
     public static function redisInit()
     {
         self::$redis = new Redis();
-        $userList = self::$redis->smembers(self::$userSet);
-        //主程序启动 清空所有聊天室在线用户
-        if (!empty($userList) ) {
-            foreach ($userList as $user) {
-                self::$redis->delete($user);
+        self::$redis->flush();
+    }
+
+    public static function onOpenHandle($serv, $frame)
+    {
+        self::$on_line_count +=1;
+
+        $serv->push($frame->fd,Client::send(100,'ok',['icon'=>'','fd'=>$frame->fd,'online'=>self::$on_line_count]));
+        foreach($serv->connections as $fd) {
+            if($fd != $frame->fd) {
+                $serv->push($fd,Client::send(20,'ok',[
+                    'online'=> self::$on_line_count,
+                    'message'=> '',
+                ]));
             }
         }
-        //创建内存表
-//        $this->createTable();
+
     }
 
-    public static function onOpenHandle($server, $request)
-    {
-        var_dump($request->cookie);
-        echo "server: handshake success with fd{$request->fd}\n";
-    }
-
-    public  function onMessageHandle($server, $frame)
+    public  static function onMessageHandle($server, $frame)
     {
         try {
-            if (!empty($frame) && $frame->opcode == 1 && $frame->finish == 1) {
-                $message = self::checkMessage($frame->data);
-                if (!$message) {
-                    $this->serverPush($server, $frame->fd, $frame->data, 'message');
-                }
-                if (isset($message["type"])) {
-                    switch ($message["type"]) {
-                        case "login":
-                            $this->login($server, $frame->fd, $message["message"], $message["room"]);
-                            break;
-                        case "message":
-                           self::serverPush($server, $frame->fd, $message["message"], 'message');
-                            break;
-                        default:
-                    }
-                   self::$redis->sadd(self::$roomListName, $message["room"]);
+            if (!empty($frame) && $frame->opcode == 1) {
+                $data = self::checkMessage($frame->data);
+                $code  = isset($data['code']) ? $data['code'] : 0;
+                switch ($code) {
+                    case 10:
+                        self::login($server,$data,$frame->fd);
+                        break;
+                    case 0:
+                        self::chat($server,$data,$frame->fd);
+                        break;
+                    default;
+                        break;
+
                 }
             } else {
                 throw new Exception("接收数据不完整");
@@ -72,29 +74,30 @@ class WebSocketHandle
 
     }
 
-    public static function onCloseHandle()
+    public static function onCloseHandle($server,$fd)
     {
 
-    }
+        $sessid = self::$redis->hGet(self::$userOnline,(string)$fd);
 
-    protected static function serverPush( $server, $frame_fd, $message = "", $message_type = "message")
-    {
-        $message = htmlspecialchars($message);
-        $datetime = date('Y-m-d H:i:s', time());
-        $userList = self::$redis->smembers(self::$userSet);
-        if (isset($userList)) {
-            foreach ($userList as $fd) {
-                if ($fd == $frame_fd) {
-                    continue;
+        $userStr = self::$redis->hGet(self::$userHash,$sessid);
+
+        $user    = json_decode($userStr,true);
+        self::$on_line_count -=1;
+        if(!empty($user)) {
+            foreach($server->connections as $_fd) {
+                if($fd != $_fd) {
+                    $server->push($_fd,Client::send(20,'ok',[
+                        'online'=> self::$on_line_count,
+                        'message'   => date("Y-m-d H:i")." <span style='font-weight: bolder;color: #008bff'>{$user['nick']}</span> 骚年下线了",
+                    ]));
                 }
-                @$server->push($fd, json_encode([
-                        'type' => $message_type,
-                        'message' => $message,
-                        'datetime' => $datetime,
-                    ])
-                );
             }
         }
+
+        self::$redis->hDel(self::$userOnline,(string)$fd);
+
+        self::$redis->hSet(self::$userHash,$sessid.self::$status,"0");
+
     }
 
     protected static function checkMessage($message)
@@ -102,7 +105,6 @@ class WebSocketHandle
         $message = json_decode($message);
         $return_message = [];
         if (!is_array($message) && !is_object($message)) {
-            self::$error = "接收的message数据格式不正确";
             return false;
         }
         if (is_object($message)) {
@@ -112,15 +114,62 @@ class WebSocketHandle
         } else {
             $return_message = $message;
         }
-        if (!isset($return_message["sessid"]) || !isset($return_message["message"])) {
+        if (!isset($return_message["code"]) || !isset($return_message["message"])) {
             return false;
         } else {
             return $return_message;
         }
     }
 
-    protected static function login($server, $frame_fd, $message = "", $room)
+    protected static function login($server, $data = [], $fd)
     {
+        $userSessid = $data['sessid'];
 
+        if (self::$redis->hGet(self::$userHash,$userSessid.self::$status) == "1")
+        {
+            $server->push($fd,Client::send(100,'ok',['icon'=>'','fd'=>$fd,'online'=>self::$on_line_count]),[
+                'message'=>'请不要重复登陆！'
+            ]);
+            $server->close($fd);
+            return;
+        }else{
+            $user = [
+                'nick'=>$data['nick'],
+                'icon'=>$data['icon'],
+            ];
+            if (!self::$redis->hExists(self::$userHash,$userSessid)){
+                self::$redis->hSet(self::$userHash,$userSessid,json_encode($user));
+            }
+
+            self::$redis->hSet(self::$userOnline,$fd,$userSessid);
+            self::$redis->hSet(self::$userHash,$userSessid.self::$status,"1");
+
+            foreach($server->connections as $fd) {
+                $server->push($fd,Client::send($data['code'],'ok',[
+                    'message'=> date("Y-m-d H:i")." <span style='font-weight: bolder;color: #ff0000'>{$user['nick']}</span> 骚年上线",
+                ]));
+            }
+        }
+
+    }
+
+    protected static function chat($server, $data = [],$framd)
+    {
+        $userSessid = $data['sessid'];
+
+        $userStr = self::$redis->hGet(self::$userHash,$userSessid);
+
+        $user = json_decode($userStr,true);
+
+        foreach($server->connections as $fd) {
+            $server->push($fd,Client::send(1,'ok',[
+                'message'=> $data['message'],
+                'code' => $data['code'],
+                'icon'=>$user['icon'],
+                'nick'=>$user['nick'],
+                'time'=>date("H:i:s"),
+                'fd'=>$framd,
+            ]));
+        }
     }
 }

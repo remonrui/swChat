@@ -224,10 +224,11 @@
                 var arr = {
                     code:10,
                     message: '登陆' ,
-                    sessid: $.cookie('sessid'),
-                    nick: $.cookie('nick'),
-                    icon: $.cookie('icon')
+                    sessid: $.cookie('chat_sessid'),
+                    nick: $.cookie('chat_nick'),
+                    icon: $.cookie('chat_icon')
                 };
+                console.log(arr)
                 ws.send( JSON.stringify(arr));
                 var html = '<div class="msg min time" id="histStart">' +
                     '<span >----- 已成功连接服务器 (点击头像更换信息) -----</span>' +
@@ -255,11 +256,15 @@
                 var self_fd = parseInt($('#fd').val());
                 var data    = eval('('+event.data+')');
                 var status  = parseInt(data.status);
+                console.log(data)
                 if( status == 100) {
+
                     $('#fd').val(data.data.fd);
                     $('.online_users').text(data.data.online);
-                    $('#msgs').append('<div class="msg min time" id="histStart" style="font-weight: bolder;color: #ff0000">'+data.data.msg+'</div>')
-                    $('#msgs').append('<div class="msg min time" id="histStart"></div>');
+                    if(typeof(data.data.message) != "undefined" && (data.data.message != "")) {
+                        $('#msgs').append('<div class="msg min time" id="histStart" style="font-weight: bolder;color: #ff0000">'+data.data.message+'</div>')
+                        $('#msgs').append('<div class="msg min time" id="histStart"></div>');
+                    }
                 } else if(status == -2) {
                     layer.msg('长时间未说话，正在重连服务器', {
                         icon: 16
@@ -269,7 +274,7 @@
                     setTimeout(function () {
                         var arr = {
                             code:10,
-                            msg: '登陆' ,
+                            message: '登陆' ,
                             sessid : $.cookie('sessid'),
                             nick: $.cookie('nick'),
                             icon: $.cookie('icon')
@@ -277,11 +282,11 @@
                         ws.send( JSON.stringify(arr));
                     },1200)
                 } else if(status == 10) {
-                    $('#msgs').append('<div class="msg min time" id="histStart">'+data.data.msg+'</div>')
+                    $('#msgs').append('<div class="msg min time" id="histStart">'+data.data.message+'</div>')
                 } else if(status == 20) {
                     $('.online_users').text(data.data.online);
-                    if(typeof(data.data.msg) != "undefined" && (data.data.msg != "")) {
-                        $('#msgs').append('<div class="msg min time" id="histStart">'+data.data.msg+'</div>')
+                    if(typeof(data.data.message) != "undefined" && (data.data.message != "")) {
+                        $('#msgs').append('<div class="msg min time" id="histStart">'+data.data.message+'</div>')
                     }
                 } else {
                     if(status==1) {
@@ -300,12 +305,12 @@
                             msg_div += '    <div class="'+msg_class+'" customer="'+data.data.nick+'">';
                             msg_div += '        <div class="msg-host photo '+open_info+'" title="'+data.data.nick+'" img_src="'+data.data.icon+'" style="background-image: url('+data.data.icon+');cursor: pointer"></div>';
 
-                            msg_div += '<div class="msg-ball img" title="今天 '+data.data.time+'" style="cursor: pointer"><img class="'+msg_class+'" src="'+data.data.msg+'"  style="width:15.25em; height: 17.25em;" /></div>';
+                            msg_div += '<div class="msg-ball img" title="今天 '+data.data.time+'" style="cursor: pointer"><img class="'+msg_class+'" src="'+data.data.message+'"  style="width:15.25em; height: 17.25em;" /></div>';
 
                             msg_div += '    </div>';
 
                         } else {
-                            var msg = data.data.msg ;
+                            var msg = data.data.message ;
 
                             msg_div += '    <div class="'+msg_class+'" worker="'+data.data.nick+'">';
                             msg_div += '        <div class="msg-host photo '+open_info+'" title="'+data.data.nick+'" img_src="'+data.data.icon+'" style="background-image: url('+data.data.icon+');cursor: pointer"></div>';
@@ -355,7 +360,7 @@
                 layer.alert('不能发送空消息');
             } else {
                 $('#TalkMSG').val('');
-                var arr = {code:0, msg: msg ,sessid: $.cookie('sessid'),md5:$.cookie('md5')};
+                var arr = {code:0, message: msg ,sessid: $.cookie('chat_sessid')};
                 ws.send( JSON.stringify(arr));
             }
         });

@@ -38,14 +38,16 @@ return [
 
     'onMessage' => function ($server, $frame) {
 
-        echo "receive from {$frame->fd}:{$frame->data},opcode:{$frame->opcode},fin:{$frame->finish}\n";
+        WebSocketHandle::onMessageHandle($server, $frame);
     },
 
     'onRequest' => function ($request, $response) {
-        $response->end("<h1>Hello Swoole. #" . rand(1000, 9999) . "</h1>");
+
     },
 
-    'onClose' => function ($ser, $fd) {
+    'onClose' => function ($server, $fd) {
+
+        WebSocketHandle::onCloseHandle($server,$fd);
         echo "client {$fd} closed\n";
     },
     /**
