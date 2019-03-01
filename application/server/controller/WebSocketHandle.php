@@ -16,15 +16,16 @@ use tools\Redis;
 class WebSocketHandle
 {
     protected static $redis;
-    protected static $userHash = "UserHash";
-    protected static $status = "_status";
+    protected static $userInfo = "UserInfo";
+    protected static $userStatus = "UserStatus";
     protected static $userOnline = "UserOnline";
     protected  static $on_line_count = 0;
 
     public static function redisInit()
     {
         self::$redis = new Redis();
-        self::$redis->flush();
+        self::$redis->delete(self::$userStatus);
+        self::$redis->delete(self::$userOnline);
     }
 
     public static function onOpenHandle($serv, $frame)
@@ -79,7 +80,11 @@ class WebSocketHandle
 
         $sessid = self::$redis->hGet(self::$userOnline,(string)$fd);
 
-        $userStr = self::$redis->hGet(self::$userHash,$sessid);
+        if (!$sessid){
+            return;
+        }
+
+        $userStr = self::$redis->hGet(self::$userInfo,$sessid);
 
         $user    = json_decode($userStr,true);
         self::$on_line_count -=1;
@@ -96,7 +101,7 @@ class WebSocketHandle
 
         self::$redis->hDel(self::$userOnline,(string)$fd);
 
-        self::$redis->hSet(self::$userHash,$sessid.self::$status,"0");
+        self::$redis->hSet(self::$userStatus,$sessid,"0");
 
     }
 
@@ -125,11 +130,15 @@ class WebSocketHandle
     {
         $userSessid = $data['sessid'];
 
-        if (self::$redis->hGet(self::$userHash,$userSessid.self::$status) == "1")
+        if (self::$redis->hGet(self::$userStatus,$userSessid) == "1")
         {
-            $server->push($fd,Client::send(100,'ok',['icon'=>'','fd'=>$fd,'online'=>self::$on_line_count]),[
-                'message'=>'请不要重复登陆！'
-            ]);
+            $server->push($fd,Client::send(1,'ok',[
+                'message'  =>'不要重复登录',
+                'icon' =>"http://pics.sc.chinaz.com/Files/pic/icons128/5938/i6.png",
+                'fd'   =>$fd,
+                'time'=>date("H:i:s")
+            ]));
+            sleep(3);
             $server->close($fd);
             return;
         }else{
@@ -137,12 +146,12 @@ class WebSocketHandle
                 'nick'=>$data['nick'],
                 'icon'=>$data['icon'],
             ];
-            if (!self::$redis->hExists(self::$userHash,$userSessid)){
-                self::$redis->hSet(self::$userHash,$userSessid,json_encode($user));
+            if (!self::$redis->hExists(self::$userInfo,$userSessid)){
+                self::$redis->hSet(self::$userInfo,$userSessid,json_encode($user));
             }
 
-            self::$redis->hSet(self::$userOnline,$fd,$userSessid);
-            self::$redis->hSet(self::$userHash,$userSessid.self::$status,"1");
+            self::$redis->hSet(self::$userOnline,(string)$fd,$userSessid);
+            self::$redis->hSet(self::$userStatus,$userSessid,"1");
 
             foreach($server->connections as $fd) {
                 $server->push($fd,Client::send($data['code'],'ok',[
@@ -157,7 +166,7 @@ class WebSocketHandle
     {
         $userSessid = $data['sessid'];
 
-        $userStr = self::$redis->hGet(self::$userHash,$userSessid);
+        $userStr = self::$redis->hGet(self::$userInfo,$userSessid);
 
         $user = json_decode($userStr,true);
 

@@ -19,7 +19,7 @@
     <meta name="x5-fullscreen" content="true">
     <meta name="x5-page-mode" content="app">
     <base target="_blank">
-    <title>PHP研究院</title>
+    <title>Chat-online</title>
     <link id="favicon" href="http://chatroom.ivisionsky.com/img/favicon.ico" rel="shortcut icon" type="image/x-icon" />
     <link rel="stylesheet" href="http://chatroom.ivisionsky.com/css/v2.css" />
     <link rel="stylesheet" href="http://chatroom.ivisionsky.com/css/layui.css" />
@@ -39,16 +39,13 @@
 <div class="abs cover contaniner">
     <div class="abs cover pnl">
         <div class="abs top pnl-head" id="pnlHead">
-            <div  class="pnl-hl" ><h4 style="color: #FFFFFF;margin: 5px">PHP研究院【 <b style="color: #ff0000">200979897</b> 】</h4></div>
+            <div  class="pnl-hl" ><h4 style="color: #FFFFFF;margin: 5px">Chat-online</h4></div>
             <div class="pnl-about" id="pnlAbout" style="width: 10em;">
-                <a target="_blank" href="//shang.qq.com/wpa/qunwpa?idkey=b5d30a7d6d90dae0fa6930c985dd7fa7fcf9cd6839521bb190c5b75b8a126c8d"><img border="0" src="//pub.idqqimg.com/wpa/images/group.png" alt="PHP研究院" title="PHP研究院"></a>
             </div>
         </div>
         <div class="abs top pnl-head-sm" id="pnlHeadSm">
             <div class="chat-title" style="font-size: 0.9em;;">
-                <a target="_blank" style="color: #FFFFFF" href="//shang.qq.com/wpa/qunwpa?idkey=b5d30a7d6d90dae0fa6930c985dd7fa7fcf9cd6839521bb190c5b75b8a126c8d">
-                    单击加群【<b style="color: #ff0000"> 200979897 </b>】，当前为手机模式
-                </a>
+               <p>当前为手机模式</p>
             </div>
         </div>
         <div class="abs cover pnl-body" id="pnlBody">
@@ -58,9 +55,9 @@
             </form>
             <div class="abs cover pnl-left">
                 <div class="abs cover pnl-msgs scroll" id="show">
-                    <a href="https://github.com/lyxlk/CharRoom" target="_blank" >
-                        <img style="position: absolute; top: 0; left: 0; border: 0;width: 120px;height: 120px;z-index: 2000" src="http://chatroom.ivisionsky.com/img/forkme.png"  alt="Fork Me On GitHub">
-                    </a>
+                    <!--<a href="https://github.com/lyxlk/CharRoom" target="_blank" >-->
+                        <!--<img style="position: absolute; top: 0; left: 0; border: 0;width: 120px;height: 120px;z-index: 2000" src="http://chatroom.ivisionsky.com/img/forkme.png"  alt="Fork Me On GitHub">-->
+                    <!--</a>-->
                     <div class="pnl-list" id="msgs" style="height: 100px">
 
                     </div>
@@ -87,7 +84,7 @@
                     <div class="abs br pnl-btn" id="sendMsg">发送</div>
                     <div class="pnl-support" id="copyright" style="width: 20em;">
                         <a href="http://chatroom.ivisionsky.com" target="_blank" title="开源项目不易，请保留作者权益信息，谢谢。">
-                            PHP研究院成员组提供技术支持
+
                         </a>
                     </div>
                 </div>
@@ -231,7 +228,7 @@
                 console.log(arr)
                 ws.send( JSON.stringify(arr));
                 var html = '<div class="msg min time" id="histStart">' +
-                    '<span >----- 已成功连接服务器 (点击头像更换信息) -----</span>' +
+                    '<span >----- 已成功连接服务器 -----</span>' +
                     '</div>' +
                     '<div class="msg" ></div>';
 
